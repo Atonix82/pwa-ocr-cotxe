@@ -20,8 +20,20 @@
       font-weight: bold;
       margin-top: 10px;
     }
-    /* Element per mostrar el resultat OCR parsejat */
-    #ocrResult {
+    /* Element per mostrar el resultat OCR brut */
+    #rawOCR {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px dashed #999;
+      background-color: #eef;
+      text-align: left;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      white-space: pre-wrap;
+    }
+    /* Element per mostrar les dades parsejades i netejades */
+    #cleanOCR {
       margin-top: 20px;
       padding: 10px;
       border: 1px solid #ccc;
@@ -31,7 +43,7 @@
       margin-left: auto;
       margin-right: auto;
     }
-    /* Elements per mostrar la data/hora i la posició del dispositiu */
+    /* Elements per mostrar data/hora i la posició del dispositiu */
     #photoDate, #devicePos {
       margin-top: 10px;
       font-weight: bold;
@@ -60,8 +72,11 @@
   <!-- Canvas per processar la imatge (ocult) -->
   <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
   
-  <!-- Element per mostrar el resultat OCR parsejat -->
-  <div id="ocrResult">Les dades parsejades apareixeran aquí...</div>
+  <!-- Element per mostrar el resultat OCR en brut -->
+  <div id="rawOCR">El resultat OCR brut es mostrarà aquí...</div>
+  
+  <!-- Element per mostrar les dades parsejades i netejades -->
+  <div id="cleanOCR">Les dades parsejades apareixeran aquí...</div>
   
   <!-- Elements per mostrar la data/hora i la posició del dispositiu -->
   <div id="photoDate">Data i hora de la foto:</div>
@@ -76,12 +91,13 @@
     const fileInput = document.getElementById('fileInput');
     const selectButton = document.getElementById('selectFromLibrary');
     const errorMsg = document.getElementById('errorMsg');
-    const ocrResultDiv = document.getElementById('ocrResult');
+    const rawOCRDiv = document.getElementById('rawOCR');
+    const cleanOCRDiv = document.getElementById('cleanOCR');
     const photoDateDiv = document.getElementById('photoDate');
     const devicePosDiv = document.getElementById('devicePos');
     const ctx = canvas.getContext('2d');
 
-    // Mostra un missatge d'error tant a la consola com a la pàgina.
+    // Mostra un missatge d'error.
     function showError(message) {
       console.error(message);
       errorMsg.textContent = message;
@@ -103,13 +119,13 @@
           video: { facingMode: "environment" } 
         });
         video.srcObject = stream;
-        errorMsg.textContent = ''; // Neteja errors
+        errorMsg.textContent = '';
       } catch (error) {
         showError('No s\'ha pogut accedir a la càmera: ' + error.message);
       }
     }
 
-    // Event listener per capturar la imatge del vídeo.
+    // Captura la imatge del vídeo i processa-la.
     captureButton.addEventListener('click', async () => {
       console.log("Botó 'Capturar imatge' clicat");
       if (!video.srcObject) {
@@ -124,13 +140,13 @@
       processImage(imageData);
     });
 
-    // Event listener per obrir el selector de fitxers.
+    // Obre el selector de fitxers per seleccionar una imatge existent.
     selectButton.addEventListener('click', () => {
       console.log("Botó 'Selecciona des de la fototeca' clicat");
       fileInput.click();
     });
 
-    // Llegeix la imatge seleccionada per l'usuari i la processa.
+    // Llegeix la imatge seleccionada i la processa.
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -150,19 +166,21 @@
           logger: m => console.log(m)
         });
         console.log("Resultat OCR brut:", text);
-        // No mostrem el resultat brut, sinó que procedim a parsejar-lo
+        // Mostra el text OCR brut en brut.
+        rawOCRDiv.textContent = text;
+        // Processa i neteja el text per obtenir els valors esperats.
         parseOCRResult(text);
       } catch (error) {
         showError('Error durant l\'OCR: ' + error.message);
       }
     }
 
-    // Funció auxiliar per netejar una línia, deixant només dígits, dos punts i punts.
+    // Funció per netejar una línia: només deixa dígits, dos punts i punts.
     function cleanLine(line) {
       return line.replace(/[^0-9:\.]/g, '');
     }
 
-    // Processa el text extret per identificar i netejar les dades esperades.
+    // Processa el text extret per extreure les dades esperades.
     function parseOCRResult(text) {
       // Divideix el text en línies i neteja cada línia.
       const lines = text.split('\n')
@@ -171,13 +189,10 @@
       console.log("Línies netejades detectades:", lines);
       const data = {};
 
-      // Extracció dels valors esperats segons els patrons:
-      // Temps: format exacte XX:XX
-      // Distància i consum: format X.X o XX.X
-      // Odòmetre: només dígits, mínim 4 xifres
+      // Extracció dels valors:
+      // Temps: cercar una coincidència que contingui el format "XX:XX"
       for (const line of lines) {
-        // Temps: cercar exactament 2 dígits, dos punts, 2 dígits.
-        const timeMatch = line.match(/^(\d{2}:\d{2})$/);
+        const timeMatch = line.match(/(\d{2}:\d{2})/);
         if (timeMatch && !data.tempsRecorregut) {
           data.tempsRecorregut = timeMatch[1];
           continue;
@@ -194,12 +209,11 @@
           data.consumRecorregut = consumptionMatch[1] + " L/100km";
           continue;
         } else if (!data.consumRecorregut && /^\d{2}$/.test(line)) {
-          // Fallback: si la línia només té 2 dígits, inserir un punt al mig.
           const numStr = line;
           data.consumRecorregut = numStr[0] + "." + numStr[1] + " L/100km";
           continue;
         }
-        // Odòmetre: només dígits amb al menys 4 xifres.
+        // Odòmetre: només dígits amb almenys 4 xifres.
         if (!data.odometre && /^\d{4,}$/.test(line)) {
           data.odometre = "ODO " + line + " km";
           continue;
@@ -207,21 +221,21 @@
       }
       
       console.log("Dades extretes:", data);
-
-      // Actualitza l'element per mostrar les dades parsejades.
-      ocrResultDiv.innerHTML = `
+      
+      // Actualitza l'element cleanOCR amb les dades parsejades.
+      cleanOCRDiv.innerHTML = `
         <p><strong>Temps:</strong> ${data.tempsRecorregut || "No detectat"}</p>
         <p><strong>Distància:</strong> ${data.distanciaRecorregut || "No detectada"}</p>
         <p><strong>Consum:</strong> ${data.consumRecorregut || "No detectat"}</p>
         <p><strong>Odòmetre:</strong> ${data.odometre || "No detectat"}</p>
       `;
-
+      
       // Assigna la data i hora actuals.
       const now = new Date();
       data.data = now.toISOString();
       photoDateDiv.textContent = "Data i hora de la foto: " + now.toLocaleString();
 
-      // Obté la posició del dispositiu utilitzant l'API Geolocation amb alta precisió.
+      // Obté la posició del dispositiu.
       getDevicePosition().then(position => {
         data.posicio = position;
         if (position) {
@@ -235,8 +249,7 @@
     }
 
     /**
-     * Obté la posició del dispositiu utilitzant l'API Geolocation.
-     * S'utilitzen opcions per a una major precisió.
+     * Obté la posició del dispositiu utilitzant l'API Geolocation amb alta precisió.
      */
     function getDevicePosition() {
       return new Promise((resolve, reject) => {
