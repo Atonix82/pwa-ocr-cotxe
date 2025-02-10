@@ -20,7 +20,7 @@
       font-weight: bold;
       margin-top: 10px;
     }
-    /* Element per mostrar el resultat OCR */
+    /* Element per mostrar el resultat OCR parsejat */
     #ocrResult {
       margin-top: 20px;
       padding: 10px;
@@ -30,9 +30,8 @@
       max-width: 600px;
       margin-left: auto;
       margin-right: auto;
-      white-space: pre-wrap;
     }
-    /* Elements per mostrar data/hora i la posició del dispositiu */
+    /* Elements per mostrar la data/hora i la posició del dispositiu */
     #photoDate, #devicePos {
       margin-top: 10px;
       font-weight: bold;
@@ -61,8 +60,8 @@
   <!-- Canvas per processar la imatge (ocult) -->
   <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
   
-  <!-- Element per mostrar el resultat OCR -->
-  <div id="ocrResult">El resultat OCR es mostrarà aquí...</div>
+  <!-- Element per mostrar el resultat OCR parsejat -->
+  <div id="ocrResult">Les dades parsejades apareixeran aquí...</div>
   
   <!-- Elements per mostrar la data/hora i la posició del dispositiu -->
   <div id="photoDate">Data i hora de la foto:</div>
@@ -150,9 +149,8 @@
         const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
           logger: m => console.log(m)
         });
-        console.log("Resultat OCR:", text);
-        // Mostra el resultat OCR per pantalla.
-        ocrResultDiv.textContent = text;
+        console.log("Resultat OCR brut:", text);
+        // No mostrem el resultat brut, sinó que procedim a parsejar-lo
         parseOCRResult(text);
       } catch (error) {
         showError('Error durant l\'OCR: ' + error.message);
@@ -164,7 +162,7 @@
       return line.replace(/[^0-9:\.]/g, '');
     }
 
-    // Processa el text extret per identificar les dades esperades.
+    // Processa el text extret per identificar i netejar les dades esperades.
     function parseOCRResult(text) {
       // Divideix el text en línies i neteja cada línia.
       const lines = text.split('\n')
@@ -174,35 +172,34 @@
       const data = {};
 
       // Extracció dels valors esperats segons els patrons:
-      // Temps: format XX:XX
+      // Temps: format exacte XX:XX
       // Distància i consum: format X.X o XX.X
-      // Odòmetre: només dígits (mínim 4 dígits)
+      // Odòmetre: només dígits, mínim 4 xifres
       for (const line of lines) {
-        // Temps: cerca dues xifres, dos punts, dues xifres.
+        // Temps: cercar exactament 2 dígits, dos punts, 2 dígits.
         const timeMatch = line.match(/^(\d{2}:\d{2})$/);
         if (timeMatch && !data.tempsRecorregut) {
           data.tempsRecorregut = timeMatch[1];
           continue;
         }
-        // Distància: si conté un punt i té format X.X o XX.X.
+        // Distància: format d'1 o 2 dígits, punt, 1 dígit (ex: 10.7)
         const distanceMatch = line.match(/^(\d{1,2}\.\d)$/);
         if (distanceMatch && !data.distanciaRecorregut) {
           data.distanciaRecorregut = distanceMatch[1] + " km";
           continue;
         }
-        // Consum: també amb format X.X o XX.X.
+        // Consum: format d'1 o 2 dígits, punt, 1 dígit (ex: 6.1)
         const consumptionMatch = line.match(/^(\d{1,2}\.\d)$/);
         if (consumptionMatch && !data.consumRecorregut) {
           data.consumRecorregut = consumptionMatch[1] + " L/100km";
           continue;
-        }
-        // Fallback per consum: si la línia només té 2 dígits, inserir un punt al mig.
-        if (!data.consumRecorregut && /^\d{2}$/.test(line)) {
+        } else if (!data.consumRecorregut && /^\d{2}$/.test(line)) {
+          // Fallback: si la línia només té 2 dígits, inserir un punt al mig.
           const numStr = line;
           data.consumRecorregut = numStr[0] + "." + numStr[1] + " L/100km";
           continue;
         }
-        // Odòmetre: només dígits i almenys 4 xifres.
+        // Odòmetre: només dígits amb al menys 4 xifres.
         if (!data.odometre && /^\d{4,}$/.test(line)) {
           data.odometre = "ODO " + line + " km";
           continue;
@@ -210,7 +207,15 @@
       }
       
       console.log("Dades extretes:", data);
-      
+
+      // Actualitza l'element per mostrar les dades parsejades.
+      ocrResultDiv.innerHTML = `
+        <p><strong>Temps:</strong> ${data.tempsRecorregut || "No detectat"}</p>
+        <p><strong>Distància:</strong> ${data.distanciaRecorregut || "No detectada"}</p>
+        <p><strong>Consum:</strong> ${data.consumRecorregut || "No detectat"}</p>
+        <p><strong>Odòmetre:</strong> ${data.odometre || "No detectat"}</p>
+      `;
+
       // Assigna la data i hora actuals.
       const now = new Date();
       data.data = now.toISOString();
@@ -224,14 +229,14 @@
         } else {
           devicePosDiv.textContent = "Posició del dispositiu: No disponible";
         }
-        // Guarda l'entrada en localStorage.
+        // Guarda la entrada en localStorage.
         saveEntry(data);
       });
     }
 
     /**
      * Obté la posició del dispositiu utilitzant l'API Geolocation.
-     * S'utilitzen opcions per a una major precisió, tal com s'explica a https://whatpwacando.today/geolocation.
+     * S'utilitzen opcions per a una major precisió.
      */
     function getDevicePosition() {
       return new Promise((resolve, reject) => {
