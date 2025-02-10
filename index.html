@@ -20,6 +20,7 @@
       font-weight: bold;
       margin-top: 10px;
     }
+    /* Element per mostrar el resultat OCR */
     #ocrResult {
       margin-top: 20px;
       padding: 10px;
@@ -30,6 +31,14 @@
       margin-left: auto;
       margin-right: auto;
       white-space: pre-wrap;
+    }
+    /* Elements per mostrar la data/hora i les coordenades GPS */
+    #photoDate, #photoGPS {
+      margin-top: 10px;
+      font-weight: bold;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
@@ -55,6 +64,10 @@
   <!-- Element per mostrar el resultat OCR -->
   <div id="ocrResult">El resultat OCR es mostrarà aquí...</div>
   
+  <!-- Elements per mostrar data/hora i coordenades GPS -->
+  <div id="photoDate">Data i hora de la foto:</div>
+  <div id="photoGPS">Coordenades GPS:</div>
+  
   <!-- Carrega Tesseract.js per l'OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
   <script>
@@ -65,6 +78,8 @@
     const selectButton = document.getElementById('selectFromLibrary');
     const errorMsg = document.getElementById('errorMsg');
     const ocrResultDiv = document.getElementById('ocrResult');
+    const photoDateDiv = document.getElementById('photoDate');
+    const photoGPSDiv = document.getElementById('photoGPS');
     const ctx = canvas.getContext('2d');
 
     // Mostra un missatge d'error tant a la consola com a la pàgina.
@@ -126,7 +141,7 @@
       reader.readAsDataURL(file);
     });
 
-    // Processa la imatge amb Tesseract.js per extreure el text.
+    // Processa la imatge amb Tesseract.js per extreure el text (OCR).
     async function processImage(imageData) {
       console.log("Processant la imatge...");
       try {
@@ -134,7 +149,7 @@
           logger: m => console.log(m)
         });
         console.log("Resultat OCR:", text);
-        // Mostra el resultat OCR per pantalla
+        // Mostra el resultat OCR per pantalla.
         ocrResultDiv.textContent = text;
         parseOCRResult(text);
       } catch (error) {
@@ -142,41 +157,41 @@
       }
     }
 
-    // Funció auxiliar per "netejar" una línia: elimina caràcters inicials o finals innecessaris.
+    // Funció auxiliar per "netejar" una línia, eliminant caràcters innecessaris.
     function cleanLine(line) {
       return line.replace(/^[^0-9A-Za-z:]+/, '').replace(/[^0-9A-Za-z:\/\.]+$/, '');
     }
 
     // Processa el text extret per identificar les dades esperades.
     function parseOCRResult(text) {
-      // Divideix el text en línies, neteja cada línia i elimina les buides.
+      // Divideix el text en línies i neteja cada línia.
       const lines = text.split('\n')
                         .map(line => cleanLine(line.trim()))
                         .filter(line => line.length > 0);
       console.log("Línies netejades detectades:", lines);
       const data = {};
 
-      // Recorrem cada línia intentant extreure la informació esperada.
+      // Extracció dels valors esperats.
       for (const line of lines) {
-        // Cerca el temps en format HH:MM
+        // Cerca el temps en format HH:MM.
         const timeMatch = line.match(/(\d{2}:\d{2})/);
         if (timeMatch && !data.tempsRecorregut) {
           data.tempsRecorregut = timeMatch[1];
           continue;
         }
-        // Cerca la distància, per exemple "10.7 km"
+        // Cerca la distància, per exemple "10.7 km".
         const distanceMatch = line.match(/(\d+(\.\d+)?)\s*km/i);
         if (distanceMatch && !data.distanciaRecorregut) {
           data.distanciaRecorregut = distanceMatch[1] + " km";
           continue;
         }
-        // Cerca el consum, per exemple "6.1 L/100km"
+        // Cerca el consum, per exemple "6.1 L/100km".
         const consumptionMatch = line.match(/(\d+(\.\d+)?)\s*L\/100km/i);
         if (consumptionMatch && !data.consumRecorregut) {
           data.consumRecorregut = consumptionMatch[1] + " L/100km";
           continue;
         } else if (!data.consumRecorregut) {
-          // Com a fallback, si trobem una xifra de dos dígits (ex. "61"), la converteix a "6.1"
+          // Com a fallback, si es detecta una xifra de dos dígits.
           const simpleMatch = line.match(/(\d{2})/);
           if (simpleMatch) {
             let numStr = simpleMatch[1];
@@ -186,10 +201,9 @@
             }
           }
         }
-        // Cerca l'odòmetre; pot aparèixer com "ODO" o "0o" seguit d'un número.
+        // Cerca l'odòmetre; pot aparèixer amb "ODO" o "0o".
         const odometerMatch = line.match(/(?:ODO|0o)[^0-9]*([\d,\.]+)/i);
         if (odometerMatch && !data.odometre) {
-          // Neteja el número (elimina comes o punts extra)
           let odoNum = odometerMatch[1].replace(/[^\d]/g, '');
           data.odometre = "ODO " + odoNum + " km";
           continue;
@@ -197,10 +211,21 @@
       }
       
       console.log("Dades extretes:", data);
-      // Afegeix la data i la posició GPS
-      data.data = new Date().toISOString();
+      
+      // Assigna la data i hora actuals (pot ser modificat per extreure EXIF si és necessari).
+      const now = new Date();
+      data.data = now.toISOString();
+      photoDateDiv.textContent = "Data i hora de la foto: " + now.toLocaleString();
+
+      // Obté la posició GPS i actualitza l'element corresponent.
       getGPSPosition().then(position => {
         data.posicio = position;
+        if (position) {
+          photoGPSDiv.textContent = "Coordenades GPS: Lat " + position.latitude + ", Lon " + position.longitude;
+        } else {
+          photoGPSDiv.textContent = "Coordenades GPS: No disponibles";
+        }
+        // Guarda la entrada en localStorage.
         saveEntry(data);
       });
     }
