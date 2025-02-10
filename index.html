@@ -6,14 +6,13 @@
   <title>PWA OCR Cotxe</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 
-20px; }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
     video, canvas { border: 1px solid #ccc; margin: 10px; }
   </style>
 </head>
 <body>
   <h1>Captura o selecciona el tauler del cotxe</h1>
-
+  
   <!-- Preview de vídeo per fer la foto en directe -->
   <video id="video" autoplay playsinline width="320" height="240"></video>
   <br>
@@ -22,17 +21,13 @@
   <!-- Botó per seleccionar una imatge de la fototeca -->
   <button id="selectFromLibrary">Selecciona des de la fototeca</button>
   <!-- Element input hidden per a la selecció de fitxer -->
-  <input type="file" id="fileInput" accept="image/*" style="display:none" 
-/>
-
-  <!-- Canvas per processar la imatge (ocult, servirà per convertir la 
-imatge en DataURL) -->
-  <canvas id="canvas" width="320" height="240" 
-style="display:none;"></canvas>
-
+  <input type="file" id="fileInput" accept="image/*" style="display:none">
+  
+  <!-- Canvas per processar la imatge (ocult, servirà per convertir la imatge en DataURL) -->
+  <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+  
   <!-- Carrega Tesseract.js per l'OCR -->
-  <script 
-src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -41,50 +36,51 @@ src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"></s
     const selectButton = document.getElementById('selectFromLibrary');
     const ctx = canvas.getContext('2d');
 
-    // Inicia la càmera
+    // Funció per iniciar la càmera; es cridarà dins d'un gest d'usuari
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: 
-{ facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
       } catch (error) {
         console.error('Error al accedir a la càmera:', error);
         alert('No s\'ha pogut accedir a la càmera.');
       }
     }
-    startCamera();
 
-    // Captura la imatge del vídeo i processa-la
-    captureButton.addEventListener('click', () => {
+    // Event listener per capturar la imatge; inicia la càmera si encara no està activada
+    captureButton.addEventListener('click', async () => {
+      console.log("Botó 'Capturar imatge' clicat");
+      if (!video.srcObject) {
+        await startCamera();
+      }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = canvas.toDataURL('image/png');
       processImage(imageData);
     });
 
-    // Al clicar el botó de selecció, obre el selector de fitxers
+    // Event listener per obrir el selector de fitxers (fototeca)
     selectButton.addEventListener('click', () => {
+      console.log("Botó 'Selecciona des de la fototeca' clicat");
       fileInput.click();
     });
 
-    // Quan l'usuari tria una imatge des de la fototeca
+    // Quan l'usuari tria una imatge de la fototeca, es llegeix i es processa
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        const imageData = e.target.result; // Data URL de la imatge 
-seleccionada
+        const imageData = e.target.result; // Data URL de la imatge seleccionada
         processImage(imageData);
       };
       reader.readAsDataURL(file);
     });
 
-    // Processa la imatge amb Tesseract.js (OCR)
+    // Processa la imatge amb Tesseract.js per extreure el text (OCR)
     async function processImage(imageData) {
       console.log("Processant la imatge...");
       try {
-        const { data: { text } } = await Tesseract.recognize(imageData, 
-'eng', {
+        const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
           logger: m => console.log(m)
         });
         console.log("Resultat OCR:", text);
@@ -97,10 +93,9 @@ seleccionada
     // Processa el text extret per identificar les dades esperades
     function parseOCRResult(text) {
       // Divideix el text en línies i elimina espais innecessaris
-      const lines = text.split('\n').map(line => line.trim()).filter(line 
-=> line.length > 0);
+      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       console.log("Línies detectades:", lines);
-
+      
       // Exemple simple d'extracció amb expressions regulars
       const data = {};
       lines.forEach(line => {
@@ -115,8 +110,8 @@ seleccionada
         }
       });
       console.log("Dades extretes:", data);
-
-      // Afegir data i posició GPS
+      
+      // Afegir data i, si és possible, la posició GPS
       data.data = new Date().toISOString();
       getGPSPosition().then(position => {
         data.posicio = position;
@@ -129,8 +124,7 @@ seleccionada
       return new Promise((resolve, reject) => {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(pos => {
-            resolve({ latitude: pos.coords.latitude, longitude: 
-pos.coords.longitude });
+            resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
           }, error => {
             console.warn("GPS no disponible:", error);
             resolve(null);
@@ -143,8 +137,7 @@ pos.coords.longitude });
 
     // Guarda l'entrada en localStorage en format JSON
     function saveEntry(entry) {
-      let entries = JSON.parse(localStorage.getItem('vehicleEntries') || 
-'[]');
+      let entries = JSON.parse(localStorage.getItem('vehicleEntries') || '[]');
       entries.push(entry);
       localStorage.setItem('vehicleEntries', JSON.stringify(entries));
       alert('Entrada guardada correctament!');
@@ -153,4 +146,3 @@ pos.coords.longitude });
   </script>
 </body>
 </html>
-
