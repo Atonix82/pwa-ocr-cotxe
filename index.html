@@ -32,8 +32,8 @@
       margin-right: auto;
       white-space: pre-wrap;
     }
-    /* Elements per mostrar la data/hora i les coordenades GPS */
-    #photoDate, #photoGPS {
+    /* Elements per mostrar data/hora i la posició del dispositiu */
+    #photoDate, #devicePos {
       margin-top: 10px;
       font-weight: bold;
       max-width: 600px;
@@ -64,9 +64,9 @@
   <!-- Element per mostrar el resultat OCR -->
   <div id="ocrResult">El resultat OCR es mostrarà aquí...</div>
   
-  <!-- Elements per mostrar data/hora i coordenades GPS -->
+  <!-- Elements per mostrar la data/hora i la posició del dispositiu -->
   <div id="photoDate">Data i hora de la foto:</div>
-  <div id="photoGPS">Coordenades GPS:</div>
+  <div id="devicePos">Posició del dispositiu:</div>
   
   <!-- Carrega Tesseract.js per l'OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
@@ -79,7 +79,7 @@
     const errorMsg = document.getElementById('errorMsg');
     const ocrResultDiv = document.getElementById('ocrResult');
     const photoDateDiv = document.getElementById('photoDate');
-    const photoGPSDiv = document.getElementById('photoGPS');
+    const devicePosDiv = document.getElementById('devicePos');
     const ctx = canvas.getContext('2d');
 
     // Mostra un missatge d'error tant a la consola com a la pàgina.
@@ -100,7 +100,9 @@
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "environment" } 
+        });
         video.srcObject = stream;
         errorMsg.textContent = ''; // Neteja errors
       } catch (error) {
@@ -157,9 +159,9 @@
       }
     }
 
-    // Funció auxiliar per "netejar" una línia, eliminant caràcters innecessaris.
+    // Funció auxiliar per netejar una línia, deixant només dígits, dos punts i punts.
     function cleanLine(line) {
-      return line.replace(/^[^0-9A-Za-z:]+/, '').replace(/[^0-9A-Za-z:\/\.]+$/, '');
+      return line.replace(/[^0-9:\.]/g, '');
     }
 
     // Processa el text extret per identificar les dades esperades.
@@ -171,75 +173,80 @@
       console.log("Línies netejades detectades:", lines);
       const data = {};
 
-      // Extracció dels valors esperats.
+      // Extracció dels valors esperats segons els patrons:
+      // Temps: format XX:XX
+      // Distància i consum: format X.X o XX.X
+      // Odòmetre: només dígits (mínim 4 dígits)
       for (const line of lines) {
-        // Cerca el temps en format HH:MM.
-        const timeMatch = line.match(/(\d{2}:\d{2})/);
+        // Temps: cerca dues xifres, dos punts, dues xifres.
+        const timeMatch = line.match(/^(\d{2}:\d{2})$/);
         if (timeMatch && !data.tempsRecorregut) {
           data.tempsRecorregut = timeMatch[1];
           continue;
         }
-        // Cerca la distància, per exemple "10.7 km".
-        const distanceMatch = line.match(/(\d+(\.\d+)?)\s*km/i);
+        // Distància: si conté un punt i té format X.X o XX.X.
+        const distanceMatch = line.match(/^(\d{1,2}\.\d)$/);
         if (distanceMatch && !data.distanciaRecorregut) {
           data.distanciaRecorregut = distanceMatch[1] + " km";
           continue;
         }
-        // Cerca el consum, per exemple "6.1 L/100km".
-        const consumptionMatch = line.match(/(\d+(\.\d+)?)\s*L\/100km/i);
+        // Consum: també amb format X.X o XX.X.
+        const consumptionMatch = line.match(/^(\d{1,2}\.\d)$/);
         if (consumptionMatch && !data.consumRecorregut) {
           data.consumRecorregut = consumptionMatch[1] + " L/100km";
           continue;
-        } else if (!data.consumRecorregut) {
-          // Com a fallback, si es detecta una xifra de dos dígits.
-          const simpleMatch = line.match(/(\d{2})/);
-          if (simpleMatch) {
-            let numStr = simpleMatch[1];
-            if (numStr.length === 2) {
-              data.consumRecorregut = numStr[0] + "." + numStr[1] + " L/100km";
-              continue;
-            }
-          }
         }
-        // Cerca l'odòmetre; pot aparèixer amb "ODO" o "0o".
-        const odometerMatch = line.match(/(?:ODO|0o)[^0-9]*([\d,\.]+)/i);
-        if (odometerMatch && !data.odometre) {
-          let odoNum = odometerMatch[1].replace(/[^\d]/g, '');
-          data.odometre = "ODO " + odoNum + " km";
+        // Fallback per consum: si la línia només té 2 dígits, inserir un punt al mig.
+        if (!data.consumRecorregut && /^\d{2}$/.test(line)) {
+          const numStr = line;
+          data.consumRecorregut = numStr[0] + "." + numStr[1] + " L/100km";
+          continue;
+        }
+        // Odòmetre: només dígits i almenys 4 xifres.
+        if (!data.odometre && /^\d{4,}$/.test(line)) {
+          data.odometre = "ODO " + line + " km";
           continue;
         }
       }
       
       console.log("Dades extretes:", data);
       
-      // Assigna la data i hora actuals (pot ser modificat per extreure EXIF si és necessari).
+      // Assigna la data i hora actuals.
       const now = new Date();
       data.data = now.toISOString();
       photoDateDiv.textContent = "Data i hora de la foto: " + now.toLocaleString();
 
-      // Obté la posició GPS i actualitza l'element corresponent.
-      getGPSPosition().then(position => {
+      // Obté la posició del dispositiu utilitzant l'API Geolocation amb alta precisió.
+      getDevicePosition().then(position => {
         data.posicio = position;
         if (position) {
-          photoGPSDiv.textContent = "Coordenades GPS: Lat " + position.latitude + ", Lon " + position.longitude;
+          devicePosDiv.textContent = "Posició del dispositiu: Lat " + position.latitude + ", Lon " + position.longitude;
         } else {
-          photoGPSDiv.textContent = "Coordenades GPS: No disponibles";
+          devicePosDiv.textContent = "Posició del dispositiu: No disponible";
         }
-        // Guarda la entrada en localStorage.
+        // Guarda l'entrada en localStorage.
         saveEntry(data);
       });
     }
 
-    // Obté la posició GPS si està disponible.
-    function getGPSPosition() {
+    /**
+     * Obté la posició del dispositiu utilitzant l'API Geolocation.
+     * S'utilitzen opcions per a una major precisió, tal com s'explica a https://whatpwacando.today/geolocation.
+     */
+    function getDevicePosition() {
       return new Promise((resolve, reject) => {
         if (navigator.geolocation) {
+          const options = {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          };
           navigator.geolocation.getCurrentPosition(pos => {
             resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
           }, error => {
-            console.warn("GPS no disponible:", error);
+            console.warn("Geolocalització no disponible:", error);
             resolve(null);
-          });
+          }, options);
         } else {
           resolve(null);
         }
