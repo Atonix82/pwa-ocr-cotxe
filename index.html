@@ -67,18 +67,18 @@
     const ocrResultDiv = document.getElementById('ocrResult');
     const ctx = canvas.getContext('2d');
 
-    // Mostra un missatge d'error
+    // Mostra un missatge d'error tant a la consola com a la pàgina.
     function showError(message) {
       console.error(message);
       errorMsg.textContent = message;
     }
 
-    // Comprova si el navegador suporta l'API getUserMedia
+    // Comprova si el navegador suporta l'API getUserMedia.
     function hasCameraSupport() {
       return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     }
 
-    // Inicia la càmera sol·licitant permisos a partir d'un gest d'usuari
+    // Inicia la càmera sol·licitant permisos a partir d'un gest d'usuari.
     async function startCamera() {
       if (!hasCameraSupport()) {
         showError('El teu navegador no suporta l’API de càmera.');
@@ -87,13 +87,13 @@
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
-        errorMsg.textContent = ''; // Esborra missatges d'error
+        errorMsg.textContent = ''; // Neteja errors
       } catch (error) {
         showError('No s\'ha pogut accedir a la càmera: ' + error.message);
       }
     }
 
-    // Captura la imatge del vídeo i processa-la amb OCR
+    // Event listener per capturar la imatge del vídeo.
     captureButton.addEventListener('click', async () => {
       console.log("Botó 'Capturar imatge' clicat");
       if (!video.srcObject) {
@@ -108,13 +108,13 @@
       processImage(imageData);
     });
 
-    // Obre el selector de fitxers per a seleccionar una imatge existent
+    // Event listener per obrir el selector de fitxers.
     selectButton.addEventListener('click', () => {
       console.log("Botó 'Selecciona des de la fototeca' clicat");
       fileInput.click();
     });
 
-    // Llegeix la imatge seleccionada i la processa amb OCR
+    // Llegeix la imatge seleccionada per l'usuari i la processa.
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -126,7 +126,7 @@
       reader.readAsDataURL(file);
     });
 
-    // Processa la imatge amb Tesseract.js i mostra el text OCR per pantalla
+    // Processa la imatge amb Tesseract.js per extreure el text.
     async function processImage(imageData) {
       console.log("Processant la imatge...");
       try {
@@ -134,7 +134,7 @@
           logger: m => console.log(m)
         });
         console.log("Resultat OCR:", text);
-        // Mostra el resultat OCR a la pàgina
+        // Mostra el resultat OCR per pantalla
         ocrResultDiv.textContent = text;
         parseOCRResult(text);
       } catch (error) {
@@ -142,23 +142,62 @@
       }
     }
 
-    // Processa el text extret per identificar les dades esperades
+    // Funció auxiliar per "netejar" una línia: elimina caràcters inicials o finals innecessaris.
+    function cleanLine(line) {
+      return line.replace(/^[^0-9A-Za-z:]+/, '').replace(/[^0-9A-Za-z:\/\.]+$/, '');
+    }
+
+    // Processa el text extret per identificar les dades esperades.
     function parseOCRResult(text) {
-      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      console.log("Línies detectades:", lines);
+      // Divideix el text en línies, neteja cada línia i elimina les buides.
+      const lines = text.split('\n')
+                        .map(line => cleanLine(line.trim()))
+                        .filter(line => line.length > 0);
+      console.log("Línies netejades detectades:", lines);
       const data = {};
-      lines.forEach(line => {
-        if (/^\d{2}:\d{2}$/.test(line)) {
-          data.tempsRecorregut = line;
-        } else if (/^\d+(\.\d+)?\s?km$/i.test(line)) {
-          data.distanciaRecorregut = line;
-        } else if (/^\d+(\.\d+)?\s?L\/100km$/i.test(line)) {
-          data.consumRecorregut = line;
-        } else if (/^ODO\s*\d+/.test(line)) {
-          data.odometre = line;
+
+      // Recorrem cada línia intentant extreure la informació esperada.
+      for (const line of lines) {
+        // Cerca el temps en format HH:MM
+        const timeMatch = line.match(/(\d{2}:\d{2})/);
+        if (timeMatch && !data.tempsRecorregut) {
+          data.tempsRecorregut = timeMatch[1];
+          continue;
         }
-      });
+        // Cerca la distància, per exemple "10.7 km"
+        const distanceMatch = line.match(/(\d+(\.\d+)?)\s*km/i);
+        if (distanceMatch && !data.distanciaRecorregut) {
+          data.distanciaRecorregut = distanceMatch[1] + " km";
+          continue;
+        }
+        // Cerca el consum, per exemple "6.1 L/100km"
+        const consumptionMatch = line.match(/(\d+(\.\d+)?)\s*L\/100km/i);
+        if (consumptionMatch && !data.consumRecorregut) {
+          data.consumRecorregut = consumptionMatch[1] + " L/100km";
+          continue;
+        } else if (!data.consumRecorregut) {
+          // Com a fallback, si trobem una xifra de dos dígits (ex. "61"), la converteix a "6.1"
+          const simpleMatch = line.match(/(\d{2})/);
+          if (simpleMatch) {
+            let numStr = simpleMatch[1];
+            if (numStr.length === 2) {
+              data.consumRecorregut = numStr[0] + "." + numStr[1] + " L/100km";
+              continue;
+            }
+          }
+        }
+        // Cerca l'odòmetre; pot aparèixer com "ODO" o "0o" seguit d'un número.
+        const odometerMatch = line.match(/(?:ODO|0o)[^0-9]*([\d,\.]+)/i);
+        if (odometerMatch && !data.odometre) {
+          // Neteja el número (elimina comes o punts extra)
+          let odoNum = odometerMatch[1].replace(/[^\d]/g, '');
+          data.odometre = "ODO " + odoNum + " km";
+          continue;
+        }
+      }
+      
       console.log("Dades extretes:", data);
+      // Afegeix la data i la posició GPS
       data.data = new Date().toISOString();
       getGPSPosition().then(position => {
         data.posicio = position;
@@ -166,7 +205,7 @@
       });
     }
 
-    // Obté la posició GPS si està disponible
+    // Obté la posició GPS si està disponible.
     function getGPSPosition() {
       return new Promise((resolve, reject) => {
         if (navigator.geolocation) {
@@ -182,7 +221,7 @@
       });
     }
 
-    // Guarda l'entrada en localStorage en format JSON
+    // Guarda l'entrada en localStorage en format JSON.
     function saveEntry(entry) {
       let entries = JSON.parse(localStorage.getItem('vehicleEntries') || '[]');
       entries.push(entry);
