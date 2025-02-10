@@ -1,167 +1,156 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" 
-"http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="ca">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2299.6">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000}
-    p.p2 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000; min-height: 14.0px}
-    p.p3 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000; min-height: 14.0px}
-    p.p4 {margin: 0.0px 0.0px 0.0px 0.0px; text-align: center; font: 11.0px 'Helvetica Neue'; color: #000000; color: rgba(0, 0, 0, 0.85); -webkit-text-stroke: rgba(0, 0, 0, 0.85); min-height: 12.0px}
-    span.s1 {font-kerning: none}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA OCR Cotxe</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 
+20px; }
+    video, canvas { border: 1px solid #ccc; margin: 10px; }
   </style>
 </head>
 <body>
-<p class="p1"><span class="s1">&lt;!DOCTYPE html&gt;</span></p>
-<p class="p1"><span class="s1">&lt;html lang="ca"&gt;</span></p>
-<p class="p1"><span class="s1">&lt;head&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;title&gt;PWA OCR Cotxe&lt;/title&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;link rel="manifest" href="manifest.json"&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;style&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>video, canvas { border: 1px solid #ccc; margin: 10px; }</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/head&gt;</span></p>
-<p class="p1"><span class="s1">&lt;body&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;h1&gt;Captura o selecciona el tauler del cotxe&lt;/h1&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;!-- Preview de vídeo per fer la foto en directe --&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;video id="video" autoplay playsinline width="320" height="240"&gt;&lt;/video&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;br&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;button id="capture"&gt;Capturar imatge amb la càmera&lt;/button&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;br&gt;&lt;br&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;!-- Botó per seleccionar una imatge de la fototeca --&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;button id="selectFromLibrary"&gt;Selecciona des de la fototeca&lt;/button&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;!-- Element input hidden per a la selecció de fitxer --&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;input type="file" id="fileInput" accept="image/*" style="display:none" /&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;!-- Canvas per processar la imatge (ocult, servirà per convertir la imatge en DataURL) --&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;canvas id="canvas" width="320" height="240" style="display:none;"&gt;&lt;/canvas&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;!-- Carrega Tesseract.js per l'OCR --&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"&gt;&lt;/script&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script&gt;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const video = document.getElementById('video');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const canvas = document.getElementById('canvas');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const captureButton = document.getElementById('capture');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const fileInput = document.getElementById('fileInput');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const selectButton = document.getElementById('selectFromLibrary');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const ctx = canvas.getContext('2d');</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Inicia la càmera</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>async function startCamera() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>try {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>video.srcObject = stream;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>} catch (error) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>console.error('Error al accedir a la càmera:', error);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>alert('No s\'ha pogut accedir a la càmera.');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>startCamera();</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Captura la imatge del vídeo i processa-la</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>captureButton.addEventListener('click', () =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>ctx.drawImage(video, 0, 0, canvas.width, canvas.height);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const imageData = canvas.toDataURL('image/png');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>processImage(imageData);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>});</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Al clicar el botó de selecció, obre el selector de fitxers</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>selectButton.addEventListener('click', () =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>fileInput.click();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>});</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Quan l'usuari tria una imatge des de la fototeca</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>fileInput.addEventListener('change', (event) =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const file = event.target.files[0];</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>if (!file) return;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const reader = new FileReader();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>reader.onload = function(e) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const imageData = e.target.result; // Data URL de la imatge seleccionada</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>processImage(imageData);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>reader.readAsDataURL(file);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>});</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Processa la imatge amb Tesseract.js (OCR)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>async function processImage(imageData) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>console.log("Processant la imatge...");</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>try {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>logger: m =&gt; console.log(m)</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>});</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>console.log("Resultat OCR:", text);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>parseOCRResult(text);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>} catch (error) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>console.error('Error durant l\'OCR:', error);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Processa el text extret per identificar les dades esperades</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>function parseOCRResult(text) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Divideix el text en línies i elimina espais innecessaris</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const lines = text.split('\n').map(line =&gt; line.trim()).filter(line =&gt; line.length &gt; 0);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>console.log("Línies detectades:", lines);</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Exemple simple d'extracció amb expressions regulars</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const data = {};</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>lines.forEach(line =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if (/^\d{2}:\d{2}$/.test(line)) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>data.tempsRecorregut = line;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} else if (/^\d+(\.\d+)?\s?km$/i.test(line)) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>data.distanciaRecorregut = line;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} else if (/^\d+(\.\d+)?\s?L\/100km$/i.test(line)) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>data.consumRecorregut = line;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} else if (/^ODO\s*\d+/.test(line)) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>data.odometre = line;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>});</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>console.log("Dades extretes:", data);</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Afegir data i posició GPS</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>data.data = new Date().toISOString();</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>getGPSPosition().then(position =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>data.posicio = position;</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>saveEntry(data);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>});</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Obté la posició GPS si està disponible</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>function getGPSPosition() {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>return new Promise((resolve, reject) =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if (navigator.geolocation) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>navigator.geolocation.getCurrentPosition(pos =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>}, error =&gt; {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>console.warn("GPS no disponible:", error);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>resolve(null);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>});</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} else {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>resolve(null);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>});</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Guarda l'entrada en localStorage en format JSON</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>function saveEntry(entry) {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>let entries = JSON.parse(localStorage.getItem('vehicleEntries') || '[]');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>entries.push(entry);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>localStorage.setItem('vehicleEntries', JSON.stringify(entries));</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>alert('Entrada guardada correctament!');</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>console.log("Entrades actuals:", entries);</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;/script&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/body&gt;</span></p>
-<p class="p1"><span class="s1">&lt;/html&gt;</span></p>
-<p class="p2"><span class="s1"></span><br></p>
-<p class="p3"><span class="s1"></span><br></p>
-<p class="p4"><span class="s1"></span><br></p>
+  <h1>Captura o selecciona el tauler del cotxe</h1>
+
+  <!-- Preview de vídeo per fer la foto en directe -->
+  <video id="video" autoplay playsinline width="320" height="240"></video>
+  <br>
+  <button id="capture">Capturar imatge amb la càmera</button>
+  <br><br>
+  <!-- Botó per seleccionar una imatge de la fototeca -->
+  <button id="selectFromLibrary">Selecciona des de la fototeca</button>
+  <!-- Element input hidden per a la selecció de fitxer -->
+  <input type="file" id="fileInput" accept="image/*" style="display:none" 
+/>
+
+  <!-- Canvas per processar la imatge (ocult, servirà per convertir la 
+imatge en DataURL) -->
+  <canvas id="canvas" width="320" height="240" 
+style="display:none;"></canvas>
+
+  <!-- Carrega Tesseract.js per l'OCR -->
+  <script 
+src="https://cdn.jsdelivr.net/npm/tesseract.js@v4.0.2/dist/tesseract.min.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureButton = document.getElementById('capture');
+    const fileInput = document.getElementById('fileInput');
+    const selectButton = document.getElementById('selectFromLibrary');
+    const ctx = canvas.getContext('2d');
+
+    // Inicia la càmera
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: 
+{ facingMode: "environment" } });
+        video.srcObject = stream;
+      } catch (error) {
+        console.error('Error al accedir a la càmera:', error);
+        alert('No s\'ha pogut accedir a la càmera.');
+      }
+    }
+    startCamera();
+
+    // Captura la imatge del vídeo i processa-la
+    captureButton.addEventListener('click', () => {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/png');
+      processImage(imageData);
+    });
+
+    // Al clicar el botó de selecció, obre el selector de fitxers
+    selectButton.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    // Quan l'usuari tria una imatge des de la fototeca
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const imageData = e.target.result; // Data URL de la imatge 
+seleccionada
+        processImage(imageData);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Processa la imatge amb Tesseract.js (OCR)
+    async function processImage(imageData) {
+      console.log("Processant la imatge...");
+      try {
+        const { data: { text } } = await Tesseract.recognize(imageData, 
+'eng', {
+          logger: m => console.log(m)
+        });
+        console.log("Resultat OCR:", text);
+        parseOCRResult(text);
+      } catch (error) {
+        console.error('Error durant l\'OCR:', error);
+      }
+    }
+
+    // Processa el text extret per identificar les dades esperades
+    function parseOCRResult(text) {
+      // Divideix el text en línies i elimina espais innecessaris
+      const lines = text.split('\n').map(line => line.trim()).filter(line 
+=> line.length > 0);
+      console.log("Línies detectades:", lines);
+
+      // Exemple simple d'extracció amb expressions regulars
+      const data = {};
+      lines.forEach(line => {
+        if (/^\d{2}:\d{2}$/.test(line)) {
+          data.tempsRecorregut = line;
+        } else if (/^\d+(\.\d+)?\s?km$/i.test(line)) {
+          data.distanciaRecorregut = line;
+        } else if (/^\d+(\.\d+)?\s?L\/100km$/i.test(line)) {
+          data.consumRecorregut = line;
+        } else if (/^ODO\s*\d+/.test(line)) {
+          data.odometre = line;
+        }
+      });
+      console.log("Dades extretes:", data);
+
+      // Afegir data i posició GPS
+      data.data = new Date().toISOString();
+      getGPSPosition().then(position => {
+        data.posicio = position;
+        saveEntry(data);
+      });
+    }
+
+    // Obté la posició GPS si està disponible
+    function getGPSPosition() {
+      return new Promise((resolve, reject) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(pos => {
+            resolve({ latitude: pos.coords.latitude, longitude: 
+pos.coords.longitude });
+          }, error => {
+            console.warn("GPS no disponible:", error);
+            resolve(null);
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    }
+
+    // Guarda l'entrada en localStorage en format JSON
+    function saveEntry(entry) {
+      let entries = JSON.parse(localStorage.getItem('vehicleEntries') || 
+'[]');
+      entries.push(entry);
+      localStorage.setItem('vehicleEntries', JSON.stringify(entries));
+      alert('Entrada guardada correctament!');
+      console.log("Entrades actuals:", entries);
+    }
+  </script>
 </body>
 </html>
+
