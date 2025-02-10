@@ -6,12 +6,27 @@
   <title>PWA OCR Cotxe</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-    video, canvas { border: 1px solid #ccc; margin: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    video, canvas {
+      border: 1px solid #ccc;
+      margin: 10px;
+    }
+    #errorMsg {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Captura o selecciona el tauler del cotxe</h1>
+  
+  <!-- Element per mostrar errors -->
+  <div id="errorMsg"></div>
   
   <!-- Preview de vídeo per fer la foto en directe -->
   <video id="video" autoplay playsinline width="320" height="240"></video>
@@ -34,49 +49,85 @@
     const captureButton = document.getElementById('capture');
     const fileInput = document.getElementById('fileInput');
     const selectButton = document.getElementById('selectFromLibrary');
+    const errorMsg = document.getElementById('errorMsg');
     const ctx = canvas.getContext('2d');
 
-    // Funció per iniciar la càmera; es cridarà dins d'un gest d'usuari
+    /**
+     * Mostra un missatge d'error a l'usuari i a la consola.
+     */
+    function showError(message) {
+      console.error(message);
+      errorMsg.textContent = message;
+    }
+
+    /**
+     * Comprova si el navegador suporta l'API getUserMedia.
+     */
+    function hasCameraSupport() {
+      return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    }
+
+    /**
+     * Inicia la càmera sol·licitant permisos, a partir d'un gest d'usuari.
+     */
     async function startCamera() {
+      if (!hasCameraSupport()) {
+        showError('El teu navegador no suporta l’API de càmera.');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
+        errorMsg.textContent = ''; // Esborra missatges d'error si tot va bé
       } catch (error) {
-        console.error('Error al accedir a la càmera:', error);
-        alert('No s\'ha pogut accedir a la càmera.');
+        showError('No s\'ha pogut accedir a la càmera: ' + error.message);
       }
     }
 
-    // Event listener per capturar la imatge; inicia la càmera si encara no està activada
+    /**
+     * Captura una imatge del vídeo i processa-la amb OCR.
+     */
     captureButton.addEventListener('click', async () => {
       console.log("Botó 'Capturar imatge' clicat");
+      // Inicia la càmera si encara no està activada
       if (!video.srcObject) {
         await startCamera();
+      }
+      // Comprova que el stream estigui actiu abans de capturar
+      if (!video.srcObject) {
+        showError('No s\'ha pogut activar la càmera.');
+        return;
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = canvas.toDataURL('image/png');
       processImage(imageData);
     });
 
-    // Event listener per obrir el selector de fitxers (fototeca)
+    /**
+     * Obre el selector de fitxers per a seleccionar una imatge existent.
+     */
     selectButton.addEventListener('click', () => {
       console.log("Botó 'Selecciona des de la fototeca' clicat");
       fileInput.click();
     });
 
-    // Quan l'usuari tria una imatge de la fototeca, es llegeix i es processa
+    /**
+     * Llegeix la imatge seleccionada per l'usuari i la processa.
+     */
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        const imageData = e.target.result; // Data URL de la imatge seleccionada
+        const imageData = e.target.result;
         processImage(imageData);
       };
       reader.readAsDataURL(file);
     });
 
-    // Processa la imatge amb Tesseract.js per extreure el text (OCR)
+    /**
+     * Processa la imatge utilitzant Tesseract.js per extreure el text (OCR).
+     */
     async function processImage(imageData) {
       console.log("Processant la imatge...");
       try {
@@ -86,17 +137,16 @@
         console.log("Resultat OCR:", text);
         parseOCRResult(text);
       } catch (error) {
-        console.error('Error durant l\'OCR:', error);
+        showError('Error durant l\'OCR: ' + error.message);
       }
     }
 
-    // Processa el text extret per identificar les dades esperades
+    /**
+     * Processa el text extret per identificar les dades esperades.
+     */
     function parseOCRResult(text) {
-      // Divideix el text en línies i elimina espais innecessaris
       const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       console.log("Línies detectades:", lines);
-      
-      // Exemple simple d'extracció amb expressions regulars
       const data = {};
       lines.forEach(line => {
         if (/^\d{2}:\d{2}$/.test(line)) {
@@ -110,8 +160,6 @@
         }
       });
       console.log("Dades extretes:", data);
-      
-      // Afegir data i, si és possible, la posició GPS
       data.data = new Date().toISOString();
       getGPSPosition().then(position => {
         data.posicio = position;
@@ -119,7 +167,9 @@
       });
     }
 
-    // Obté la posició GPS si està disponible
+    /**
+     * Obté la posició GPS si està disponible.
+     */
     function getGPSPosition() {
       return new Promise((resolve, reject) => {
         if (navigator.geolocation) {
@@ -135,7 +185,9 @@
       });
     }
 
-    // Guarda l'entrada en localStorage en format JSON
+    /**
+     * Guarda l'entrada en localStorage en format JSON.
+     */
     function saveEntry(entry) {
       let entries = JSON.parse(localStorage.getItem('vehicleEntries') || '[]');
       entries.push(entry);
